@@ -1,0 +1,321 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Lab Access Request System Infrastructure'
+
+Resources:
+  # DynamoDB Table for Reservations
+  ReservacionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Reservacion
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  # IAM Role for Lambda Functions
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !GetAtt ReservacionTable.Arn
+
+  # Lambda Functions
+  CreateReservacionFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: CreateReservacion
+      Runtime: java17
+      Handler: org.pucmm.practica.handler.CreateReservacionHandler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 512
+      Code:
+        S3Bucket: your-deployment-bucket // Cambiar por el nombre del bucket de despliegue
+        S3Key: Serverless_AWS-1.0-SNAPSHOT-all.jar  // Cambiar por el nombre del archivo JAR
+      Environment:
+        Variables:
+          COCKROACH_URL: !Ref CockroachDbUrl
+          COCKROACH_USER: !Ref CockroachDbUser
+          COCKROACH_PASSWORD: !Ref CockroachDbPassword
+
+  GetActiveReservacionesFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GetActiveReservaciones
+      Runtime: java17
+      Handler: org.pucmm.practica.handler.GetActiveReservacionesHandler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 512
+      Code:
+        S3Bucket: your-deployment-bucket
+        S3Key: Serverless_AWS-1.0-SNAPSHOT-all.jar // Cambiar por el nombre del archivo JAR
+      Environment:
+        Variables:
+          COCKROACH_URL: !Ref CockroachDbUrl
+          COCKROACH_USER: !Ref CockroachDbUser
+          COCKROACH_PASSWORD: !Ref CockroachDbPassword
+
+  GetPastReservacionesFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GetPastReservaciones
+      Runtime: java17
+      Handler: org.pucmm.practica.handler.GetPastReservacionesHandler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 512
+      Code:
+        S3Bucket: your-deployment-bucket
+        S3Key: Serverless_AWS-1.0-SNAPSHOT-all.jar // Cambiar por el nombre del archivo JAR
+      Environment:
+        Variables:
+          COCKROACH_URL: !Ref CockroachDbUrl
+          COCKROACH_USER: !Ref CockroachDbUser
+          COCKROACH_PASSWORD: !Ref CockroachDbPassword
+
+  # API Gateway
+  LabAccessApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: LabAccessApi
+      Description: API for Lab Access Request System
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  ReservationsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ParentId: !GetAtt LabAccessApi.RootResourceId
+      PathPart: reservations
+
+  ActiveReservationsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ParentId: !Ref ReservationsResource
+      PathPart: active
+
+  PastReservationsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ParentId: !Ref ReservationsResource
+      PathPart: past
+
+  CreateReservationMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ResourceId: !Ref ReservationsResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateReservationFunction.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+
+  GetActiveReservationsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ResourceId: !Ref ActiveReservationsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetActiveReservationsFunction.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+
+  GetPastReservationsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ResourceId: !Ref PastReservationsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetPastReservationsFunction.Arn}/invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+
+  # CORS Configuration for all methods
+  ReservationsCorsOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ResourceId: !Ref ReservationsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: '{}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+          ResponseModels:
+            application/json: Empty
+
+  ActiveReservationsCorsOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ResourceId: !Ref ActiveReservationsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: '{}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+          ResponseModels:
+            application/json: Empty
+
+  PastReservationsCorsOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      ResourceId: !Ref PastReservationsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: '{}'
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+          ResponseModels:
+            application/json: Empty
+
+  # Deployment and Stage
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - CreateReservationMethod
+      - GetActiveReservationsMethod
+      - GetPastReservationsMethod
+      - ReservationsCorsOptions
+      - ActiveReservationsCorsOptions
+      - PastReservationsCorsOptions
+    Properties:
+      RestApiId: !Ref LabAccessApi
+      StageName: prod
+
+  # Lambda Permissions
+  CreateReservationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CreateReservationFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LabAccessApi}/*/POST/reservations
+
+  GetActiveReservationsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GetActiveReservationsFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LabAccessApi}/*/GET/reservations/active
+
+  GetPastReservationsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref GetPastReservationsFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LabAccessApi}/*/GET/reservations/past
+
+Parameters:
+  CockroachDbUrl:
+    Type: String
+    Description: CockroachDB connection URL
+    NoEcho: true
+
+  CockroachDbUser:
+    Type: String
+    Description: CockroachDB username
+    NoEcho: true
+
+  CockroachDbPassword:
+    Type: String
+    Description: CockroachDB password
+    NoEcho: true
+
+Outputs:
+  ApiUrl:
+    Description: URL of the API endpoint
+    Value: !Sub https://${LabAccessApi}.execute-api.${AWS::Region}.amazonaws.com/prod
