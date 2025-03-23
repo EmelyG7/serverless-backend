@@ -41,7 +41,7 @@ public class ReservacionService {
     }
 
     public List<Reservacion> getActiveReservations() throws SQLException {
-        String sql = "SELECT * FROM reservacion WHERE active = true AND reservation_time > now() ORDER BY reservation_time";
+        String sql = "SELECT * FROM reservacion WHERE active = true AND reservation_time > CURRENT_TIMESTAMP ORDER BY reservation_time";
 
         List<Reservacion> reservations = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();

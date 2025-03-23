@@ -13,9 +13,9 @@ public class DatabaseConnection {
     //contrasena de sql user
     // Md3vIHmSjvOuG_CMaK--1Q
     // These should be stored in AWS Secrets Manager in a production environment
-    private static final String DB_URL = System.getenv("COCKROACH_URL");
-    private static final String DB_USER = System.getenv("COCKROACH_USER");
-    private static final String DB_PASSWORD = System.getenv("COCKROACH_PASSWORD");
+    private static final String DB_URL = "jdbc:postgresql://blog-db-13456.7tt.aws-us-east-1.cockroachlabs.cloud:26257/serverless?sslmode=verify-full&sslrootcert=C:\\Users\\Coshita\\AppData\\Roaming\\postgresql\\root.crt";
+    private static final String DB_USER = "emely";
+    private static final String DB_PASSWORD = "Md3vIHmSjvOuG_CMaK--1Q";
 
     private static Connection connection;
 

@@ -23,6 +23,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation 'org.springframework.boot:spring-boot-starter-web' // Añade esta línea
 
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -44,7 +45,7 @@ dependencies {
 
     // Logging
     implementation 'org.slf4j:slf4j-api:2.0.5'
-    implementation 'org.slf4j:slf4j-simple:2.0.5'
+//    implementation 'org.slf4j:slf4j-simple:2.0.5'
 
 
     // Testing
@@ -52,6 +53,9 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
     implementation 'org.junit.jupiter:junit-jupiter-params:5.9.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.0'
+
+
+    implementation 'com.zaxxer:HikariCP:5.0.1'
 
     // Mockito para tests
     testImplementation 'org.mockito:mockito-core:5.2.0'
