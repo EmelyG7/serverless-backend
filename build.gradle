@@ -20,59 +20,38 @@ repositories {
 
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    implementation 'org.springframework.boot:spring-boot-starter-web' // Añade esta línea
-
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-
-    // AWS Lambda Core
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.2'
     implementation 'com.amazonaws:aws-lambda-java-events:3.11.1'
-
-    // CockroachDB Driver
-    implementation 'org.postgresql:postgresql:42.7.2'
-
-    // JSON Processing
-    implementation 'com.google.code.gson:gson:2.8.9'
-
-
-    // Utilities
-    implementation 'org.projectlombok:lombok:1.18.34'
-    annotationProcessor 'org.projectlombok:lombok:1.18.34'
-
-    // Logging
-    implementation 'org.slf4j:slf4j-api:2.0.5'
-//    implementation 'org.slf4j:slf4j-simple:2.0.5'
-
+    implementation 'org.postgresql:postgresql:42.7.3'
+    implementation 'com.google.code.gson:gson:2.10.1' // Actualizado
+    implementation 'com.zaxxer:HikariCP:5.0.1'
+    implementation 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'  // Para JdbcTemplate
 
     // Testing
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
-    implementation 'org.junit.jupiter:junit-jupiter-params:5.9.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.0'
-
-
-    implementation 'com.zaxxer:HikariCP:5.0.1'
-
-    // Mockito para tests
-    testImplementation 'org.mockito:mockito-core:5.2.0'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.2.0'
-    testImplementation 'org.mockito:mockito-inline:5.2.0' // Para mockear métodos estáticos
-    implementation 'org.mockito:mockito-core:5.2.0'
-    implementation 'org.mockito:mockito-junit-jupiter:5.2.0'
-    implementation 'org.mockito:mockito-inline:5.2.0' // Para mockear métodos estáticos
-
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+//    testCompileOnly 'org.projectlombok:lombok:1.18.30'
+//    testAnnotationProcessor 'org.projectlombok:lombok:1.18.30'
 }
+//
+//// Genera un fat JAR automáticamente
+//bootJar {
+//    archiveFileName = 'serverless.jar'
+//
+//}
 
 shadowJar {
+    archiveFileName = 'lambda.jar'
+    mergeServiceFiles()
+    dependencies {
+        exclude(dependency('org.springframework.boot:spring-boot-starter-tomcat')) // Opcional para Lambda
+    }
     manifest {
         attributes 'Main-Class': 'org.pucmm.practica.Main'
     }
 }
-
 
 tasks.named('test') {
     useJUnitPlatform()

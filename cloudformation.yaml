@@ -1,59 +1,37 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Lab Access Request System Infrastructure'
+Description: 'Lab Access Request System Infrastructure with CockroachDB'
+
+Parameters:
+  CockroachDbUrl:
+    Type: String
+    Description: CockroachDB connection URL (e.g., jdbc:postgresql://host:port/db?sslmode=verify-full)
+    NoEcho: true
+    Default: "jdbc:postgresql://blog-db-13456.7tt.aws-us-east-1.cockroachlabs.cloud:26257/serverless?sslmode=verify-full"
+  CockroachDbUser:
+    Type: String
+    Description: CockroachDB username
+    NoEcho: true
+    Default: "emely"
+  CockroachDbPassword:
+    Type: String
+    Description: CockroachDB password
+    NoEcho: true
+    Default: "Md3vIHmSjvOuG_CMaK--1Q"
 
 Resources:
-  # DynamoDB Table for Reservations
-  ReservacionTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: Reservacion
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-
-  # IAM Role for Lambda Functions
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: DynamoDBAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:GetItem
-                  - dynamodb:PutItem
-                  - dynamodb:Query
-                  - dynamodb:Scan
-                Resource: !GetAtt ReservacionTable.Arn
-
   # Lambda Functions
   CreateReservacionFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: CreateReservacion
       Runtime: java17
-      Handler: org.pucmm.practica.handler.CreateReservacionHandler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Handler: org.pucmm.practica.serverleslambdaaws.handler.CreateReservacionHandler
+      Role: arn:aws:iam::348345132515:role/LabRole  # Usamos LabRole
       Timeout: 30
       MemorySize: 512
       Code:
-        S3Bucket: your-deployment-bucket // Cambiar por el nombre del bucket de despliegue
-        S3Key: Serverless_AWS-1.0-SNAPSHOT-all.jar  // Cambiar por el nombre del archivo JAR
+        S3Bucket: lab-access-bucket-emely-2025
+        S3Key: ServerlesLambdaAws-0.0.1-SNAPSHOT.jar
       Environment:
         Variables:
           COCKROACH_URL: !Ref CockroachDbUrl
@@ -65,13 +43,13 @@ Resources:
     Properties:
       FunctionName: GetActiveReservaciones
       Runtime: java17
-      Handler: org.pucmm.practica.handler.GetActiveReservacionesHandler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Handler: org.pucmm.practica.serverleslambdaaws.handler.GetActiveReservacionesHandler
+      Role: arn:aws:iam::348345132515:role/LabRole  # Usamos LabRole
       Timeout: 30
       MemorySize: 512
       Code:
-        S3Bucket: your-deployment-bucket
-        S3Key: Serverless_AWS-1.0-SNAPSHOT-all.jar // Cambiar por el nombre del archivo JAR
+        S3Bucket: lab-access-bucket-emely-2025
+        S3Key: ServerlesLambdaAws-0.0.1-SNAPSHOT.jar
       Environment:
         Variables:
           COCKROACH_URL: !Ref CockroachDbUrl
@@ -83,13 +61,13 @@ Resources:
     Properties:
       FunctionName: GetPastReservaciones
       Runtime: java17
-      Handler: org.pucmm.practica.handler.GetPastReservacionesHandler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Handler: org.pucmm.practica.serverleslambdaaws.handler.GetPastReservacionesHandler
+      Role: arn:aws:iam::348345132515:role/LabRole  # Usamos LabRole
       Timeout: 30
       MemorySize: 512
       Code:
-        S3Bucket: your-deployment-bucket
-        S3Key: Serverless_AWS-1.0-SNAPSHOT-all.jar // Cambiar por el nombre del archivo JAR
+        S3Bucket: lab-access-bucket-emely-2025
+        S3Key: ServerlesLambdaAws-0.0.1-SNAPSHOT.jar
       Environment:
         Variables:
           COCKROACH_URL: !Ref CockroachDbUrl
@@ -137,7 +115,7 @@ Resources:
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateReservationFunction.Arn}/invocations
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateReservacionFunction.Arn}/invocations
       MethodResponses:
         - StatusCode: 200
           ResponseModels:
@@ -153,7 +131,7 @@ Resources:
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetActiveReservationsFunction.Arn}/invocations
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetActiveReservacionesFunction.Arn}/invocations
       MethodResponses:
         - StatusCode: 200
           ResponseModels:
@@ -169,7 +147,7 @@ Resources:
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetPastReservationsFunction.Arn}/invocations
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetPastReservacionesFunction.Arn}/invocations
       MethodResponses:
         - StatusCode: 200
           ResponseModels:
@@ -279,7 +257,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref CreateReservationFunction
+      FunctionName: !Ref CreateReservacionFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LabAccessApi}/*/POST/reservations
 
@@ -287,7 +265,7 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref GetActiveReservationsFunction
+      FunctionName: !Ref GetActiveReservacionesFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LabAccessApi}/*/GET/reservations/active
 
@@ -295,25 +273,9 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref GetPastReservationsFunction
+      FunctionName: !Ref GetPastReservacionesFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LabAccessApi}/*/GET/reservations/past
-
-Parameters:
-  CockroachDbUrl:
-    Type: String
-    Description: CockroachDB connection URL
-    NoEcho: true
-
-  CockroachDbUser:
-    Type: String
-    Description: CockroachDB username
-    NoEcho: true
-
-  CockroachDbPassword:
-    Type: String
-    Description: CockroachDB password
-    NoEcho: true
 
 Outputs:
   ApiUrl:

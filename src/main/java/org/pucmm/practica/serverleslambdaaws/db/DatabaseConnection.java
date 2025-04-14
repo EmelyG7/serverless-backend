@@ -12,10 +12,11 @@ public class DatabaseConnection {
 
     //contrasena de sql user
     // Md3vIHmSjvOuG_CMaK--1Q
+    //wFvTtIlk5qJKrwwbAe0E2g
     // These should be stored in AWS Secrets Manager in a production environment
-    private static final String DB_URL = "jdbc:postgresql://blog-db-13456.7tt.aws-us-east-1.cockroachlabs.cloud:26257/serverless?sslmode=verify-full&sslrootcert=C:\\Users\\Coshita\\AppData\\Roaming\\postgresql\\root.crt";
+    private static final String DB_URL = "jdbc:postgresql://blog-db-13456.7tt.aws-us-east-1.cockroachlabs.cloud:26257/serverless?sslmode=verify-full&sslrootcert=C:\\Users\\Coshita\\IdeaProjects\\ServerlesLambdaAws\\src\\main\\resources\\cockroachdb-root.crt";
     private static final String DB_USER = "emely";
-    private static final String DB_PASSWORD = "Md3vIHmSjvOuG_CMaK--1Q";
+    private static final String DB_PASSWORD = "wFvTtIlk5qJKrwwbAe0E2g";
 
     private static Connection connection;
 
